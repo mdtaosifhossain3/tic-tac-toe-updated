@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
+enum Difficulty { easy, medium, hard }
+
 class DBHelper {
   static Future<Database> initDb() async {
     return openDatabase(
@@ -37,24 +39,23 @@ class _GameScreenState extends State<GameScreen> {
   int aiScore = 0;
   int drawScore = 0;
   int itemFilled = 0;
+  Difficulty currentDifficulty = Difficulty.medium;
 
   late Database db;
   late BannerAd _bannerAd;
   bool isBannerAddLoaded = false;
   InterstitialAd? _interstitialAd;
+
   void loadAd() {
     InterstitialAd.load(
         adUnitId: "ca-app-pub-2225408843963260/2264614336",
         request: const AdRequest(),
         adLoadCallback: InterstitialAdLoadCallback(
-          // Called when an ad is successfully received.
           onAdLoaded: (ad) {
             debugPrint('$ad loaded.');
-            // Keep a reference to the ad so you can show it later.
             _interstitialAd = ad;
             _interstitialAd?.show();
           },
-          // Called when an ad request failed.
           onAdFailedToLoad: (LoadAdError error) {
             debugPrint('InterstitialAd failed to load: $error');
           },
@@ -138,12 +139,11 @@ class _GameScreenState extends State<GameScreen> {
     final Uri smsUri = Uri(
       scheme: 'sms',
       path: phoneNumber,
-      queryParameters: {'body': message}, // pre-fill message
+      queryParameters: {'body': message},
     );
 
-    // Check if the URL can be launched (i.e., if SMS is available)
     if (await canLaunchUrl(smsUri)) {
-      await launchUrl(smsUri); // Opens SMS app with pre-filled message
+      await launchUrl(smsUri);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not launch SMS')),
@@ -151,9 +151,57 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  String _getDifficultyText() {
+    switch (currentDifficulty) {
+      case Difficulty.easy:
+        return 'Easy';
+      case Difficulty.medium:
+        return 'Medium';
+      case Difficulty.hard:
+        return 'Hard';
+    }
+  }
+
+  Color _getDifficultyColor() {
+    switch (currentDifficulty) {
+      case Difficulty.easy:
+        return Colors.green;
+      case Difficulty.medium:
+        return Colors.orange;
+      case Difficulty.hard:
+        return Colors.red;
+    }
+  }
+
+  double _getRandomMoveChance() {
+    switch (currentDifficulty) {
+      case Difficulty.easy:
+        return 0.60; // 60% random moves (40% minimax)
+      case Difficulty.medium:
+        return 0.25; // 25% random moves (75% minimax)
+      case Difficulty.hard:
+        return 0.18; // 18% random moves (82% minimax)
+    }
+  }
+
+  void _changeDifficulty() {
+    setState(() {
+      switch (currentDifficulty) {
+        case Difficulty.easy:
+          currentDifficulty = Difficulty.medium;
+          break;
+        case Difficulty.medium:
+          currentDifficulty = Difficulty.hard;
+          break;
+        case Difficulty.hard:
+          currentDifficulty = Difficulty.easy;
+          break;
+      }
+    });
+  }
+
   @override
   void dispose() {
-    // TODO: implement dispose
     super.dispose();
     _bannerAd.dispose();
   }
@@ -200,6 +248,48 @@ class _GameScreenState extends State<GameScreen> {
                               ),
                             ),
                       const SizedBox(height: 16),
+                      // Difficulty selector
+                      GestureDetector(
+                        onTap: _changeDifficulty,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _getDifficultyColor().withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: _getDifficultyColor(),
+                              width: 2,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.settings,
+                                color: _getDifficultyColor(),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Difficulty: ${_getDifficultyText()}',
+                                style: TextStyle(
+                                  color: _getDifficultyColor(),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.touch_app,
+                                color: _getDifficultyColor(),
+                                size: 16,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
@@ -212,7 +302,7 @@ class _GameScreenState extends State<GameScreen> {
                     ],
                   ),
                   AspectRatio(
-                    aspectRatio: 1, // Always square
+                    aspectRatio: 1,
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -438,8 +528,8 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     int bestMove;
-    // 15% chance to make a random move, 85% minimax
-    if (Random().nextDouble() < 0.15) {
+    // Use difficulty-based random move chance
+    if (Random().nextDouble() < _getRandomMoveChance()) {
       List<int> available = [];
       for (int i = 0; i < 9; i++) {
         if (items[i] == '') available.add(i);
@@ -543,7 +633,7 @@ class _GameScreenState extends State<GameScreen> {
   void _showDialog({bool isInitial = false}) {
     showDialog(
       barrierDismissible: false,
-      context: this.context, // explicitly use the State's BuildContext
+      context: this.context,
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: const Color(0xff1A2A33),
