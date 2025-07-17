@@ -1,6 +1,9 @@
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
 import 'package:tic_tac_toe/game_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -11,42 +14,27 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
+    with TickerProviderStateMixin {
+  //animation controller
+  late final _controller =
+  AnimationController(duration: const Duration(seconds: 3), vsync: this)
+    ..repeat();
+
+  @override
+  void dispose() {
+    super.dispose();
+    _controller.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize the animation controller
-    _controller = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    );
-
-    // Define the scale animation
-    _scaleAnimation =
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
-
-    // Start the animation
-    _controller.forward();
-
-    // Navigate to the next screen after a delay
     Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                const GameScreen()), // Link to your main screen
-      );
+      Navigator.push(context, MaterialPageRoute(
+          builder: (context) {
+        return const GameScreen();
+      }));
     });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   @override
@@ -55,77 +43,90 @@ class _SplashScreenState extends State<SplashScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        // decoration: const BoxDecoration(
-        //   gradient: LinearGradient(
-        //     colors: [Color(0xff5A1E76), Color(0xff24BCE7)],
-        //     begin: Alignment.topLeft,
-        //     end: Alignment.bottomRight,
-        //   ),
-        // ),
-        color: const Color(0xff1A2A33),
-        child: Center(
-          child: ScaleTransition(
-            scale: _scaleAnimation,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xff1A2A33),
+              Color(0xff24BCE7),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xff24BCE7).withValues(alpha: 0.6),
-                        blurRadius: 32,
-                        spreadRadius: 8,
-                      ),
-                    ],
-                    gradient: const LinearGradient(
-                      colors: [Color(0xff43115B), Color(0xff24BCE7)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                Material(
+                  elevation: 12,
+                  shape: const CircleBorder(),
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, child) {
+                        return Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                Colors.purpleAccent.withValues(alpha: 0.4),
+                                blurRadius:
+                                32 * (0.7 + 0.3 * _controller.value),
+                                spreadRadius: 4,
+                              ),
+                            ],
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xff667eea).withValues(alpha: 0.8),
+                                const Color(0xff764ba2).withValues(alpha: 0.8),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: Center(
+                            child: Transform.rotate(
+                              angle: _controller.value * 2.0 * math.pi,
+                              child:Image.asset("assets/images/logo_without_bg.png"),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  padding: const EdgeInsets.all(28),
-                  child: const Icon(
-                    Icons.games,
-                    color: Colors.white,
-                    size: 100,
-                    shadows: [
-                      Shadow(
-                        color: Color(0xff24BCE7),
-                        blurRadius: 16,
-                        offset: Offset(0, 0),
-                      ),
-                    ],
-                  ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 36),
                 const Text(
                   "Tic Tac Toe",
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 38,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                    fontFamily: 'Roboto',
-                    shadows: [
-                      Shadow(
-                        color: Colors.black26,
-                        blurRadius: 8,
-                        offset: Offset(2, 2),
-                      ),
-                    ],
+                    fontSize: 28,
+                    color: Colors.white,
+                    letterSpacing: 1.2,
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  "Get Ready to Play!",
+                const SizedBox(height: 10),
+                Text(
+                  "Get Ready to play",
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 1,
+                    fontSize: 16,
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
+                ),
+                const SizedBox(height: 36),
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 3.5,
                 ),
               ],
             ),
